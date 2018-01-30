@@ -155,24 +155,56 @@ class Trainer(Container):
         return y
 
 
+class BatchGenerator:
+    def __init__(self, train_generator, val_generator, train_steps, val_steps):
+        self.train_generator = train_generator
+        self.val_generator = val_generator
+
+        self.train_steps = train_steps
+        self.val_steps = val_steps
+
+    def get_batch(self, data, step):
+        if data == 'train':
+            return next(self.train_generator)
+        elif data == 'validation':
+            return next(self.val_generator)
+        else:
+            raise ValueError('data must be train or validation')
+
+
+class BatchLargeData:
+    def __init__(self, train_data, val_data, batch_size):
+        self.train_data = train_data
+        self.val_data = val_data
+
+        self.train_steps = ceil(len(train_data) / batch_size)
+        self.val_steps = ceil(len(val_data) / batch_size)
+
+    def get_batch(self, data, step):
+        batch_size = self.batch_size
+        if data == 'train':
+            return self.train_data[step * batch_size: (step + 1) * batch_size]
+        elif data == 'validation':
+            return self.val_data[step * batch_size: (step + 1) * batch_size]
+        else:
+            raise ValueError('data must be train or validation')
+
+
 class Model(Trainer):
-    def fit(self, train_x, train_y, val_x, val_y, epochs=10, batch_size=32,
-            checkpoint=None, callback=None):
+    def _fit(self, batch, epochs=10, checkpoint=None, callback=None):
         te = trange(epochs)
         current_time = time()
         min_loss = 9999
 
-        train_steps = ceil(len(train_x) / batch_size)
-        val_steps = ceil(len(val_x) / batch_size)
+        train_steps = batch.train_steps
+        val_steps = batch.val_steps
         for epoch in te:
             ts = trange(train_steps)
             t_loss = 0
             t_acc = 0
             for t in ts:
-                x_batch = train_x[t * batch_size: (t + 1) * batch_size]
-                y_batch = train_y[t * batch_size: (t + 1) * batch_size]
+                x_batch, y_batch = batch.get_batch('train', t)
                 x_batch = (x_batch / 127.5) - 1
-                # y_batch = np.argmax(y_batch, axis=1)
                 step_loss, step_acc = self.train_on_batch(x_batch, y_batch)
                 ts.set_description('train: loss=%g, acc=%g' %
                                    (step_loss, step_acc))
@@ -185,17 +217,12 @@ class Model(Trainer):
 
             self.epoch += 1
             self.optimizer.decrease_lr()
-            # for k in self.optim_configs:
-            #     self.optim_configs[k]['learning_rate'] *= self.lr_decay
 
             acc = 0
             loss = 0
             for t in range(val_steps):
-                x_batch = val_x[t * batch_size: (t + 1) * batch_size]
-                y_batch = val_y[t * batch_size: (t + 1) * batch_size]
-
+                x_batch, y_batch = batch.get_batch('validation', t)
                 x_batch = (x_batch / 127.5) - 1
-                # y_batch = np.argmax(y_batch, axis=1)
 
                 val_loss, val_acc, _ = self._forward(
                     x_batch, y_batch, mode='test')
@@ -220,64 +247,18 @@ class Model(Trainer):
         # print new line to prevent next prompt override progress bar
         print()
 
+    def fit(self, train_data, val_data, epochs=10, batch_size=32,
+            checkpoint=None, callback=None):
+        batch = BatchLargeData(train_data, val_data, batch_size=batch_size)
+        self._fit(batch, epochs=epochs,
+                  checkpoint=checkpoint, callback=callback)
+
     def fit_generator(self, train_generator, val_generator, train_steps,
                       val_steps, epochs=10, checkpoint=None, callback=None):
-        te = trange(epochs)
-        current_time = time()
-        min_loss = 9999
-        for epoch in te:
-            ts = trange(train_steps)
-            t_loss = 0
-            t_acc = 0
-            for t in ts:
-                x_train, y_train = next(train_generator)
-                x_train = x_train.transpose(0, 3, 1, 2).astype(np.float32)
-                x_train = (x_train / 127.5) - 1
-                y_train = np.argmax(y_train, axis=1)
-                step_loss, step_acc = self.train_on_batch(x_train, y_train)
-                ts.set_description('train: loss=%g, acc=%g' %
-                                   (step_loss, step_acc))
-                t_loss += step_loss
-                t_acc += step_acc
-            t_loss /= train_steps
-            t_acc /= train_steps
-            self.metrics['train_loss'].append(t_loss)
-            self.metrics['train_acc'].append(t_acc)
-
-            self.epoch += 1
-            self.optimizer.decrease_lr()
-            # for k in self.optim_configs:
-            #     self.optim_configs[k]['learning_rate'] *= self.lr_decay
-
-            acc = 0
-            loss = 0
-            for t in range(val_steps):
-                x_val, y_val = next(val_generator)
-                x_val = np.asarray(x_val.transpose(0, 3, 1, 2), np.float32)
-                x_val = (x_val / 127.5) - 1
-                y_val = np.argmax(y_val, axis=1)
-
-                val_loss, val_acc, _ = self._forward(x_val, y_val, mode='test')
-                min_loss = min(min_loss, val_loss)
-                if val_loss <= min_loss and checkpoint is not None:
-                    save_name = '%s-%d-%d' % (checkpoint, epoch, current_time)
-                    self.save(save_name)
-                acc += val_acc
-                loss += val_loss
-            acc /= val_steps
-            loss /= val_steps
-            self.metrics['val_loss'].append(loss)
-            self.metrics['val_acc'].append(acc)
-            te.set_description('loss: %g acc:%g' % (loss, acc))
-
-            if callback is not None:
-                params = self._get_parameters()
-                callback(self.epoch, params, self.metrics['train_loss'],
-                         self.metrics['val_loss'], self.metrics['train_acc'],
-                         self.metrics['val_acc'])
-
-        # print new line to prevent next prompt override progress bar
-        print()
+        batch = BatchGenerator(train_generator, val_generator,
+                               train_steps=train_steps, val_steps=val_steps)
+        self._fit(batch, epochs=epochs,
+                  checkpoint=checkpoint, callback=callback)
 
     def _get_parameters(self):
         params = {}

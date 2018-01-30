@@ -19,6 +19,15 @@ class RandomNormal(Initializer):
                                 dtype=dtype)
 
 
+class RandomUniform(Initializer):
+    def __init__(self, low=-1, high=1):
+        self.low = low
+        self.high = high
+
+    def __call__(self, shape, dtype=np.float32):
+        return np.random.uniform(low=self.low, high=self.high, size=shape)
+
+
 class GlorotNormal(Initializer):
     def __call__(self, shape, dtype=np.float32):
         if len(shape) == 2:
@@ -37,5 +46,6 @@ class GlorotNormal(Initializer):
 
 initializers = {
     "random_normal": RandomNormal(),
+    "random_uniform": RandomUniform(),
     "glorot_normal": GlorotNormal()
 }
