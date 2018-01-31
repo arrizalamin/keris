@@ -1,7 +1,7 @@
 import numpy as np
 from time import time
 from tqdm import trange
-from container import Container
+from keris.container import Container
 
 
 class Trainer(Container):

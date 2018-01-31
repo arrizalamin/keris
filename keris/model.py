@@ -1,6 +1,6 @@
 import numpy as np
 from math import ceil
-from trainer import Trainer
+from keris.trainer import Trainer
 
 
 class BatchGenerator:
