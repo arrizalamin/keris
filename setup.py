@@ -1,10 +1,10 @@
 from setuptools import setup
 
 setup(name='keris',
-      version='0.1',
-      description='Keras-like deep learning framework built with numpy',
+      version='0.2',
+      description='Simple keras-like deep learning framework built with numpy',
       url='https://github.com/arrizalamin/keris',
-      download_url='https://github.com/arrizalamin/keris/archive/0.1.tar.gz',
+      download_url='https://github.com/arrizalamin/keris/archive/0.2.tar.gz',
       author='Arrizal Amin',
       author_email='arrizalamin@gmail.com',
       license='MIT',
