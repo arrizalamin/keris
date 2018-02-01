@@ -1,6 +1,4 @@
 import numpy as np
-from time import time
-from tqdm import trange
 from keris.container import Container
 
 
@@ -135,59 +133,3 @@ class Trainer(Container):
     def predict(self, data, stop=None):
         y = self._forward(data, mode='test', stop=stop)
         return y
-
-    def _fit(self, batch, epochs=10, checkpoint=None, callback=None):
-        te = trange(epochs)
-        current_time = time()
-        min_loss = 9999
-
-        train_steps = batch.train_steps
-        val_steps = batch.val_steps
-        for epoch in te:
-            ts = trange(train_steps)
-            t_loss = 0
-            t_acc = 0
-            for t in ts:
-                x_batch, y_batch = batch.get_batch('train', t)
-                x_batch = (x_batch / 127.5) - 1
-                step_loss, step_acc = self.train_on_batch(x_batch, y_batch)
-                ts.set_description('train: loss=%g, acc=%g' %
-                                   (step_loss, step_acc))
-                t_loss += step_loss
-                t_acc += step_acc
-            t_loss /= train_steps
-            t_acc /= train_steps
-            self.metrics['train_loss'].append(t_loss)
-            self.metrics['train_acc'].append(t_acc)
-
-            self.epoch += 1
-            self.optimizer.decrease_lr()
-
-            acc = 0
-            loss = 0
-            for t in range(val_steps):
-                x_batch, y_batch = batch.get_batch('validation', t)
-                x_batch = (x_batch / 127.5) - 1
-
-                val_loss, val_acc, _ = self._forward(
-                    x_batch, y_batch, mode='test')
-                min_loss = min(min_loss, val_loss)
-                if val_loss <= min_loss and checkpoint is not None:
-                    save_name = '%s-%d-%d' % (checkpoint, epoch, current_time)
-                    self.save(save_name)
-                acc += val_acc
-                loss += val_loss
-            acc /= val_steps
-            loss /= val_steps
-            self.metrics['val_loss'].append(loss)
-            self.metrics['val_acc'].append(acc)
-            te.set_description('loss: %g acc:%g' % (loss, acc))
-
-            if callback is not None:
-                params = self._get_parameters()
-                callback(self.epoch, params, self.metrics['train_loss'],
-                         self.metrics['val_loss'], self.metrics['train_acc'],
-                         self.metrics['val_acc'])
-
-        # print new line to prevent next prompt override progress bar
-        print()

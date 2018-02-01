@@ -1,5 +1,7 @@
 import numpy as np
 from math import ceil
+from time import time
+from tqdm import trange
 from keris.trainer import Trainer
 
 
@@ -44,18 +46,83 @@ class BatchLargeData:
 
 
 class Model(Trainer):
+    def _fit(self, batch, epochs=10, checkpoint=None, callbacks=[]):
+        self.stop_training = False
+        self._init_callbacks(callbacks)
+        self._reset_metrics()
+
+        te = trange(epochs)
+        current_time = time()
+        min_loss = 9999
+
+        train_steps = batch.train_steps
+        val_steps = batch.val_steps
+        for epoch in te:
+            if self.stop_training:
+                break
+
+            self._call_callbacks('on_epoch_begin')
+
+            t_loss, t_acc, v_loss, v_acc = 0, 0, 0, 0
+
+            ts = trange(train_steps)
+            for t in ts:
+                x_batch, y_batch = batch.get_batch('train', t)
+                x_batch = (x_batch / 127.5) - 1
+                step_loss, step_acc = self.train_on_batch(x_batch, y_batch)
+                ts.set_description('train: loss=%g, acc=%g' %
+                                   (step_loss, step_acc))
+                t_loss += step_loss
+                t_acc += step_acc
+            self.metrics['train_loss'] = t_loss / train_steps
+            self.metrics['train_acc'] = t_acc / train_steps
+
+            for t in range(val_steps):
+                x_batch, y_batch = batch.get_batch('validation', t)
+                x_batch = (x_batch / 127.5) - 1
+
+                val_loss, val_acc, _ = self._forward(
+                    x_batch, y_batch, mode='test')
+                v_acc += val_acc
+                v_loss += val_loss
+            self.metrics['val_loss'] = v_loss / val_steps
+            self.metrics['val_acc'] = v_acc / val_steps
+            te.set_description('loss: %g acc:%g' % (
+                self.metrics['val_loss'], self.metrics['val_acc']))
+
+            self._call_callbacks('on_epoch_end')
+
+            self.epoch += 1
+            self.optimizer.decrease_lr()
+
+        # print new line to prevent next prompt override progress bar
+        print()
+
+    def _init_callbacks(self, callbacks):
+        self.callbacks = callbacks
+        for callback in self.callbacks:
+            callback.set_model(self)
+
+    def _call_callbacks(self, method_name):
+        for callback in self.callbacks:
+            getattr(callback, method_name)(self.epoch, self.metrics)
+
+    def _reset_metrics(self):
+        metrics_name = ['train_loss', 'train_acc', 'val_loss', 'val_acc']
+        self.metrics = {key: 0 for key in metrics_name}
+
     def fit(self, train_data, val_data, epochs=10, batch_size=32,
-            checkpoint=None, callback=None):
+            checkpoint=None, callbacks=[]):
         batch = BatchLargeData(train_data, val_data, batch_size=batch_size)
         self._fit(batch, epochs=epochs,
-                  checkpoint=checkpoint, callback=callback)
+                  checkpoint=checkpoint, callbacks=callbacks)
 
     def fit_generator(self, train_generator, val_generator, train_steps,
-                      val_steps, epochs=10, checkpoint=None, callback=None):
+                      val_steps, epochs=10, checkpoint=None, callbacks=[]):
         batch = BatchGenerator(train_generator, val_generator,
                                train_steps=train_steps, val_steps=val_steps)
         self._fit(batch, epochs=epochs,
-                  checkpoint=checkpoint, callback=callback)
+                  checkpoint=checkpoint, callbacks=callbacks)
 
     def _get_parameters(self):
         params = {}
