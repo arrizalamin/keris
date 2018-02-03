@@ -1,8 +1,8 @@
 import numpy as np
 from math import ceil
-from time import time
 from tqdm import trange
 from keris.trainer import Trainer
+from keris.callbacks import BaseLogger, History
 
 
 class BatchGenerator:
@@ -48,15 +48,16 @@ class BatchLargeData:
 class Model(Trainer):
     def _fit(self, batch, epochs=10, checkpoint=None, callbacks=[]):
         self.stop_training = False
-        self._init_callbacks(callbacks)
+
+        default_callbacks = [BaseLogger(), History()]
+        self._init_callbacks(callbacks, with_default=default_callbacks)
+
         self._reset_metrics()
 
         te = trange(epochs)
-        current_time = time()
-        min_loss = 9999
-
         train_steps = batch.train_steps
         val_steps = batch.val_steps
+        self._call_callbacks('on_train_begin')
         for epoch in te:
             if self.stop_training:
                 break
@@ -94,18 +95,23 @@ class Model(Trainer):
 
             self.epoch += 1
             self.optimizer.decrease_lr()
+        self._call_callbacks('on_train_end')
 
         # print new line to prevent next prompt override progress bar
         print()
 
-    def _init_callbacks(self, callbacks):
-        self.callbacks = callbacks
+    def _init_callbacks(self, callbacks, with_default=[]):
+        self.callbacks = with_default
+        self.callbacks.extend(callbacks)
         for callback in self.callbacks:
             callback.set_model(self)
 
     def _call_callbacks(self, method_name):
         for callback in self.callbacks:
-            getattr(callback, method_name)(self.epoch, self.metrics)
+            if method_name in ['on_train_begin', 'on_train_end']:
+                getattr(callback, method_name)(self.metrics)
+            else:
+                getattr(callback, method_name)(self.epoch, self.metrics)
 
     def _reset_metrics(self):
         metrics_name = ['train_loss', 'train_acc', 'val_loss', 'val_acc']
