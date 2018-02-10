@@ -41,7 +41,7 @@ class GlorotNormal(Initializer):
 
         stddev = sqrt(2 / (n_in + n_out))
 
-        return np.random.normal(loc=0, scale=stddev, size=shape)
+        return np.random.normal(loc=0, scale=stddev, size=shape).astype(np.float32)
 
 
 initializers = {

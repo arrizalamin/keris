@@ -16,8 +16,8 @@ class Adam(Optimizer):
 
     def add_parameter(self, name, shape):
         self.param_configs[name] = {
-            'm': np.zeros(shape),
-            'v': np.zeros(shape),
+            'm': np.zeros(shape, dtype=np.float32),
+            'v': np.zeros(shape, dtype=np.float32),
         }
 
     def update(self, name, x, dx):

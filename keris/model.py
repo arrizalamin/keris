@@ -6,18 +6,28 @@ from keris.callbacks import BaseLogger, History
 
 
 class BatchGenerator:
-    def __init__(self, train_generator, val_generator, train_steps, val_steps):
+    def __init__(self, train_generator, val_generator, train_steps, val_steps,
+                 data_format='channels_last'):
         self.train_generator = train_generator
         self.val_generator = val_generator
 
         self.train_steps = train_steps
         self.val_steps = val_steps
+        self.data_format = data_format
 
     def get_batch(self, data, step):
         if data == 'train':
-            return next(self.train_generator)
+            x_batch, y_batch = next(self.train_generator)
+            if self.data_format == 'channels_last':
+                x_batch = x_batch.transpose(0, 3, 1, 2).astype(np.float32)
+                y_batch = np.argmax(y_batch, axis=1)
+                return x_batch, y_batch
         elif data == 'validation':
-            return next(self.val_generator)
+            x_batch, y_batch = next(self.val_generator)
+            if self.data_format == 'channels_last':
+                x_batch = x_batch.transpose(0, 3, 1, 2).astype(np.float32)
+                y_batch = np.argmax(y_batch, axis=1)
+                return x_batch, y_batch
         else:
             raise ValueError('data must be train or validation')
 
