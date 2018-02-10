@@ -1,6 +1,6 @@
 import numpy as np
 from keris.layers.layer import Layer
-from keris.layers.im2col import im2col_indices, col2im_indices
+from keris.utils.im2col import im2col, col2im
 
 
 class PoolMethod:
@@ -26,9 +26,9 @@ class MaxPoolReshapeMethod(PoolMethod):
         N, C, H, W = x.shape
         pool_height, pool_width = self.pool_size
         stride = self.stride
-        assert pool_height == pool_width == stride, 'Invalid pool params'
-        assert H % pool_height == 0
-        assert W % pool_height == 0
+        # assert pool_height == pool_width == stride, 'Invalid pool params'
+        # assert H % pool_height == 0
+        # assert W % pool_height == 0
 
         out_height = int(H // pool_height)
         out_width = int(W // pool_width)
@@ -83,15 +83,15 @@ class MaxPoolIm2colMethod(PoolMethod):
         pool_height, pool_width = self.pool_size
         stride = self.stride
 
-        assert (H - pool_height) % stride == 0, 'Invalid height'
-        assert (W - pool_width) % stride == 0, 'Invalid width'
+        # assert (H - pool_height) % stride == 0, 'Invalid height'
+        # assert (W - pool_width) % stride == 0, 'Invalid width'
 
         out_height = int((H - pool_height) // stride + 1)
         out_width = int((W - pool_width) // stride + 1)
 
         x_split = x.reshape(N * C, 1, H, W)
-        x_cols = im2col_indices(x_split, pool_height, pool_width,
-                                padding=0, stride=stride)
+        x_cols = np.asarray(
+            im2col(x_split, pool_height, pool_width, 0, stride))
         x_cols_argmax = np.argmax(x_cols, axis=0)
         x_cols_max = x_cols[x_cols_argmax, np.arange(x_cols.shape[1])]
         out = x_cols_max.reshape(
@@ -116,8 +116,9 @@ class MaxPoolIm2colMethod(PoolMethod):
         dout_reshaped = dout.transpose(2, 3, 0, 1).flatten()
         dx_cols = np.zeros_like(x_cols)
         dx_cols[x_cols_argmax, np.arange(dx_cols.shape[1])] = dout_reshaped
-        dx = col2im_indices(dx_cols, (N * C, 1, H, W), pool_height, pool_width,
-                            padding=0, stride=stride)
+        dx = np.asarray(
+            col2im(dx_cols, (N * C), 1, H, W, pool_height, pool_width,
+                   0, stride))
         dx = dx.reshape(x.shape)
 
         return dx
@@ -178,7 +179,7 @@ class GlobalAveragePooling2D(Layer):
         N = self.N
         C, H, W = self.input_shape
         avg = 1 / (H * W)
-        dx = np.full((N, C, H, W), avg)
+        dx = np.full((N, C, H, W), avg, dtype=np.float32)
         for i in range(N):
             for j in range(C):
                 dx[i, j, :, :] *= dout[i, j]

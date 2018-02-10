@@ -1,6 +1,6 @@
 import numpy as np
 from keris.layers.layer import Layer
-from keris.layers.im2col import im2col_indices, col2im_indices
+from keris.utils.im2col import im2col, col2im
 
 
 class Conv2D(Layer):
@@ -28,7 +28,7 @@ class Conv2D(Layer):
                                                           channels,
                                                           *self.filters)),
 
-            'b': np.zeros(self.kernel_size)
+            'b': np.zeros(self.kernel_size, dtype=np.float32)
         }
         return params
 
@@ -45,15 +45,15 @@ class Conv2D(Layer):
         # Create output
         out_height = (H + 2 * pad - filter_height) // stride + 1
         out_width = (W + 2 * pad - filter_width) // stride + 1
-        out = np.zeros((N, num_filters, out_height, out_width), dtype=x.dtype)
 
-        self.x_cols = x_cols = im2col_indices(
-            x, filter_height, filter_width, pad, stride)
-        # self.x_cols = x_cols = im2col_cython(
-        #     x, filter_height, filter_width, pad, stride)
+        if x.dtype == np.float64:
+            print(self.name)
+
+        self.x_cols = x_cols = np.asarray(
+            im2col(x, filter_height, filter_width, pad, stride))
         res = w.reshape((w.shape[0], -1)).dot(x_cols) + b.reshape(-1, 1)
 
-        out = res.reshape(w.shape[0], out.shape[2], out.shape[3], x.shape[0])
+        out = res.reshape(self.kernel_size, out_height, out_width, N)
         out = out.transpose(3, 0, 1, 2)
 
         return out
@@ -61,6 +61,7 @@ class Conv2D(Layer):
     def backward(self, dout, mode):
         x, w = self.x, self.params['w']
         stride, pad, x_cols = self.stride, self.pad, self.x_cols
+        N, C, H, W = x.shape
 
         db = np.sum(dout, axis=(0, 2, 3))
 
@@ -69,11 +70,9 @@ class Conv2D(Layer):
         dw = dout_reshaped.dot(x_cols.T).reshape(w.shape)
 
         dx_cols = w.reshape(num_filters, -1).T.dot(dout_reshaped)
-        dx = col2im_indices(dx_cols, x.shape, filter_height,
-                            filter_width, pad, stride)
-        # dx = col2im_cython(dx_cols, x.shape[0], x.shape[1], x.shape[2],
-        #                    x.shape[3], filter_height, filter_width, pad,
-        #                    stride)
+        dx = np.asarray(
+            col2im(dx_cols, N, C, H, W, filter_height, filter_width, pad,
+                   stride))
 
         grads = {
             'w': dw,

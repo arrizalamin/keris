@@ -1,4 +1,12 @@
 from setuptools import setup
+from distutils.extension import Extension
+import numpy
+
+extensions = [
+    Extension('keris.utils.im2col',
+              ['keris/utils/im2col.c'],
+              include_dirs=[numpy.get_include()]),
+]
 
 setup(name='keris',
       version='0.2',
@@ -9,6 +17,7 @@ setup(name='keris',
       author_email='arrizalamin@gmail.com',
       license='MIT',
       packages=['keris'],
+      ext_modules=extensions,
       keywords=['deep learning', 'keris'],
       install_requires=['numpy>=1.13.3',
                         'tqdm>=4.19.4'])
