@@ -20,13 +20,13 @@ class BatchGenerator:
             x_batch, y_batch = next(self.train_generator)
             if self.data_format == 'channels_last':
                 x_batch = x_batch.transpose(0, 3, 1, 2).astype(np.float32)
-                y_batch = np.argmax(y_batch, axis=1)
+                # y_batch = np.argmax(y_batch, axis=1)
                 return x_batch, y_batch
         elif data == 'validation':
             x_batch, y_batch = next(self.val_generator)
             if self.data_format == 'channels_last':
                 x_batch = x_batch.transpose(0, 3, 1, 2).astype(np.float32)
-                y_batch = np.argmax(y_batch, axis=1)
+                # y_batch = np.argmax(y_batch, axis=1)
                 return x_batch, y_batch
         else:
             raise ValueError('data must be train or validation')
@@ -80,7 +80,7 @@ class Model(Trainer):
             for t in ts:
                 x_batch, y_batch = batch.get_batch('train', t)
                 x_batch = (x_batch / 127.5) - 1
-                step_loss, step_acc = self.train_on_batch(x_batch, y_batch)
+                step_acc, step_loss = self.train_on_batch(x_batch, y_batch)
                 ts.set_description('train: loss=%g, acc=%g' %
                                    (step_loss, step_acc))
                 t_loss += step_loss

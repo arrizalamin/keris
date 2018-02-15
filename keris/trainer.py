@@ -65,10 +65,9 @@ class Trainer(Container):
         if y is None:
             return out
 
-        acc = (np.argmax(out, axis=1) == y).mean()
-        loss, dout = self.loss_fn(out, y)
+        acc, loss, dout = self.loss_fn(out, y)
 
-        return loss, acc, dout
+        return acc, loss, dout
 
     def _all_next_nodes_traversed(self, node):
         for next_node in node.next_layers:
@@ -125,10 +124,10 @@ class Trainer(Container):
         be called manually.
         """
         # Compute loss and gradient
-        loss, acc, dout = self._forward(x, y, mode='train')
+        acc, loss, dout = self._forward(x, y, mode='train')
         self._backward(dout)
 
-        return loss, acc
+        return acc, loss
 
     def predict(self, data, stop=None):
         y = self._forward(data, mode='test', stop=stop)
