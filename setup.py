@@ -9,10 +9,10 @@ extensions = [
 ]
 
 setup(name='keris',
-      version='0.2',
+      version='0.3',
       description='Simple keras-like deep learning framework built with numpy',
       url='https://github.com/arrizalamin/keris',
-      download_url='https://github.com/arrizalamin/keris/archive/0.2.tar.gz',
+      download_url='https://github.com/arrizalamin/keris/archive/0.3.tar.gz',
       author='Arrizal Amin',
       author_email='arrizalamin@gmail.com',
       license='MIT',
