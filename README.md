@@ -10,7 +10,7 @@ Keris uses keras-like [functional API](https://keras.io/getting-started/function
 from keris.model import Model
 from keris.layers import Input, Conv2D, LeakyReLU, MaxPool2D, Concatenate, Dropout, Dense
 from keris.optimizers import Adam
-from keris.losses import softmax_crossentropy
+from keris.losses import categorical_softmax_crossentropy
 from keris.callbacks import EarlyStopping, ModelCheckpoint
 
 input_layer = Input(input_shape=(3, 60, 60), name='input')
@@ -31,7 +31,7 @@ callbacks = [EarlyStopping(patience=5),
 
 
 model = Model(hidden)
-model.compile(loss_fn=softmax_crossentropy, optimizer=optimizer)
+model.compile(loss_fn=categorical_softmax_crossentropy, optimizer=optimizer)
 
 model.fit(train_data, validation_data, epochs=100, batch_size=32, callbacks=callbacks)
 
