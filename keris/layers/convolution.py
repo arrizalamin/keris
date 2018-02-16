@@ -33,10 +33,11 @@ class Conv2D(Layer):
         return params
 
     def forward(self, x, mode):
-        self.x, stride, pad = x, self.stride, self.pad
+        self.x_shape = x.shape
+        N, C, H, W = x.shape
+        stride, pad = self.stride, self.pad
         w, b = self.params['w'], self.params['b']
-        N, _, H, W = x.shape
-        num_filters, _, filter_height, filter_width = w.shape
+        _, _, filter_height, filter_width = w.shape
 
         # Check dimensions
         # assert (W + 2 * pad - filter_width) % stride == 0, 'width does not work'
@@ -49,8 +50,7 @@ class Conv2D(Layer):
         if x.dtype == np.float64:
             print(self.name)
 
-        self.x_cols = x_cols = np.asarray(
-            im2col(x, filter_height, filter_width, pad, stride))
+        self.x_cols = x_cols = self._im2col(x)
         res = w.reshape((w.shape[0], -1)).dot(x_cols) + b.reshape(-1, 1)
 
         out = res.reshape(self.kernel_size, out_height, out_width, N)
@@ -58,21 +58,29 @@ class Conv2D(Layer):
 
         return out
 
+    def _im2col(self, x):
+        w = self.params['w']
+        pad, stride = self.pad, self.stride
+        _, _, filter_height, filter_width = w.shape
+
+        if filter_height == 1 and filter_width == 1 and pad == 0:
+            return x.transpose(1, 2, 3, 0).reshape(x.shape[1], -1)
+        else:
+            return np.asarray(
+                im2col(x, filter_height, filter_width, pad, stride))
+
     def backward(self, dout, mode):
-        x, w = self.x, self.params['w']
-        stride, pad, x_cols = self.stride, self.pad, self.x_cols
-        N, C, H, W = x.shape
+        w = self.params['w']
+        x_cols, num_filters = self.x_cols, w.shape[0]
+        N, C, H, W = self.x_shape
 
         db = np.sum(dout, axis=(0, 2, 3))
 
-        num_filters, _, filter_height, filter_width = w.shape
         dout_reshaped = dout.transpose(1, 2, 3, 0).reshape(num_filters, -1)
         dw = dout_reshaped.dot(x_cols.T).reshape(w.shape)
 
         dx_cols = w.reshape(num_filters, -1).T.dot(dout_reshaped)
-        dx = np.asarray(
-            col2im(dx_cols, N, C, H, W, filter_height, filter_width, pad,
-                   stride))
+        dx = self._col2im(dx_cols)
 
         grads = {
             'w': dw,
@@ -81,57 +89,14 @@ class Conv2D(Layer):
 
         return dx, grads
 
+    def _col2im(self, dx_cols):
+        w, stride, pad = self.params['w'], self.stride, self.pad
+        _, _, filter_height, filter_width = w.shape
+        N, C, H, W = self.x_shape
 
-class Conv1x1NoPad(Layer):
-    def __init__(self, kernel_size, name):
-        super().__init__(name)
-        self.trainable = True
-        self.kernel_size = kernel_size
-
-    def _initialize_params(self, input_shape, output_shape):
-        C = input_shape[0]
-        out = self.kernel_size
-        params = {
-            'w': self._with_initializer('glorot_normal', (out, C, 1, 1)),
-            'b': self.weight_scale * np.zeros(out),
-        }
-
-        return params
-
-    def _get_output_shape(self, input_shape):
-        C, H, W = input_shape
-        out = self.kernel_size
-        out_shape = out, H, W
-
-        return out_shape
-
-    def forward(self, x, mode):
-        self.x, w, b = x, self.params['w'], self.params['b']
-        N, _, H, W = x.shape
-        F = w.shape[0]
-        out = np.zeros((N, F, H, W))
-        for i in range(F):
-            out[:, i, :, :] = np.sum(x * w[i], axis=1) + b[i]
-
-        return out
-
-    def backward(self, dout, mode):
-        x, w = self.x, self.params['w']
-        N, _, H, W = x.shape
-        F = w.shape[0]
-
-        db = dout.sum(axis=(0, 2, 3))
-        dw = np.zeros_like(w)
-        dx = np.zeros_like(x)
-
-        for i in range(F):
-            dw[i, :, :, :] = np.sum(x * dout[:, i, :, :][:, None],
-                                    axis=(0, 2, 3))[:, None, None]
-        for i in range(N):
-            dx[i, :, :, :] = (w * dout[i, :, :, :][:, None]).sum(axis=0)
-
-        grads = {
-            'w': dw,
-            'b': db,
-        }
-        return dx, grads
+        if filter_height == 1 and filter_width == 1 and pad == 0:
+            return dx_cols.reshape(C, H, W, N).transpose(3, 0, 1, 2)
+        else:
+            return np.asarray(
+                col2im(dx_cols, N, C, H, W, filter_height, filter_width, pad,
+                       stride))
