@@ -1,21 +1,21 @@
-import numpy as np
+import keris.backend as K
 
 
 def categorical_softmax_crossentropy(x, y):
-    y = np.argmax(y, axis=1)
+    y = y.argmax(axis=1)
     return binary_softmax_crossentropy(x, y)
 
 
 def binary_softmax_crossentropy(x, y):
-    acc = (np.argmax(x, axis=1) == y).mean()
+    acc = (x.argmax(axis=1) == y).mean()
 
-    probs = np.exp(x - np.max(x, axis=1, keepdims=True))
-    probs /= np.sum(probs, axis=1, keepdims=True)
+    probs = K.exp(x - x.max(axis=1, keepdims=True))
+    probs /= probs.sum(axis=1, keepdims=True)
     N = x.shape[0]
-    log = np.log(probs[np.arange(N), y])
-    loss = -np.sum(log) / N
+    log = K.log(probs[K.arange(N), y])
+    loss = -K.sum(log) / N
 
     dx = x.copy()
-    dx[np.arange(N), y] -= 1
+    dx[K.arange(N), y] -= 1
     dx /= N
     return acc, loss, dx

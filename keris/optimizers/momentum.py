@@ -1,5 +1,5 @@
+import keris.backend as K
 from keris.optimizers.optimizer import Optimizer
-import numpy as np
 
 
 class MomentumGD(Optimizer):
@@ -11,9 +11,9 @@ class MomentumGD(Optimizer):
         self.param_configs = dict()
 
     def add_parameter(self, name, shape):
-        self.param_configs[name]['v'] = np.zeros(shape)
+        self.param_configs[name]['v'] = K.zeros(shape)
         if self.nesterov:
-            self.param_configs[name]['v_prev'] = np.zeros(shape)
+            self.param_configs[name]['v_prev'] = K.zeros(shape)
 
     def update(self, name, x, dx):
         config = self.param_configs[name]

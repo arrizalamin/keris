@@ -1,5 +1,5 @@
+import keris.backend as K
 from keris.optimizers.optimizer import Optimizer
-import numpy as np
 
 
 class Adam(Optimizer):
@@ -16,8 +16,8 @@ class Adam(Optimizer):
 
     def add_parameter(self, name, shape):
         self.param_configs[name] = {
-            'm': np.zeros(shape, dtype=np.float32),
-            'v': np.zeros(shape, dtype=np.float32),
+            'm': K.zeros(shape, dtype=K.float32),
+            'v': K.zeros(shape, dtype=K.float32),
         }
 
     def update(self, name, x, dx):
@@ -35,6 +35,6 @@ class Adam(Optimizer):
             vb = config['v'] / (1 - self.beta2 ** self.epoch)
 
         self.param_configs[name] = config
-        out = x - self.lr * mb / (np.sqrt(vb) + self.epsilon)
+        out = x - self.lr * mb / (K.sqrt(vb) + self.epsilon)
 
         return out

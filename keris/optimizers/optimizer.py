@@ -1,6 +1,3 @@
-import numpy as np
-
-
 class Optimizer:
     def add_parameter(self, name, shape):
         pass

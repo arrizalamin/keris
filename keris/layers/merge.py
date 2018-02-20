@@ -1,4 +1,4 @@
-import numpy as np
+import keris.backend as K
 from keris.layers.layer import Layer
 
 
@@ -28,12 +28,11 @@ class Concatenate(Layer):
         return tuple(out)
 
     def forward(self, x, mode):
-        self._check_input(x)
-        out = np.concatenate(tuple(x), axis=self.axis + 1)
+        out = K.concatenate(tuple(x), axis=self.axis + 1)
         return out
 
     def backward(self, dout, mode):
-        dx = np.split(dout, self.in_axis, axis=self.axis + 1)
+        dx = K.split(dout, self.in_axis, axis=self.axis + 1)
         return tuple(dx), None
 
 
@@ -48,8 +47,9 @@ class Sum(Layer):
         return input_shape[0]
 
     def forward(self, x, mode):
-        self._check_input(x)
-        out = np.sum(x, axis=0)
+        out = K.zeros(self.shape, K.float32)
+        for i in x:
+            out = i
         return out
 
     def backward(self, dout, mode):

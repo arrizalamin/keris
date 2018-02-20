@@ -1,4 +1,4 @@
-import numpy as np
+import keris.backend as K
 from keris.layers.layer import Layer
 from keris.utils.im2col import im2col, col2im
 
@@ -28,7 +28,7 @@ class Conv2D(Layer):
                                                           channels,
                                                           *self.filters)),
 
-            'b': np.zeros(self.kernel_size, dtype=np.float32)
+            'b': K.zeros(self.kernel_size, dtype=K.float32)
         }
         return params
 
@@ -47,9 +47,6 @@ class Conv2D(Layer):
         out_height = (H + 2 * pad - filter_height) // stride + 1
         out_width = (W + 2 * pad - filter_width) // stride + 1
 
-        if x.dtype == np.float64:
-            print(self.name)
-
         self.x_cols = x_cols = self._im2col(x)
         res = w.reshape((w.shape[0], -1)).dot(x_cols) + b.reshape(-1, 1)
 
@@ -66,15 +63,16 @@ class Conv2D(Layer):
         if filter_height == 1 and filter_width == 1 and pad == 0:
             return x.transpose(1, 2, 3, 0).reshape(x.shape[1], -1)
         else:
-            return np.asarray(
-                im2col(x, filter_height, filter_width, pad, stride))
+            x_cpu = K.get_cpu_array(x)
+            return K.asarray(
+                im2col(x_cpu, filter_height, filter_width, pad, stride))
 
     def backward(self, dout, mode):
         w = self.params['w']
         x_cols, num_filters = self.x_cols, w.shape[0]
         N, C, H, W = self.x_shape
 
-        db = np.sum(dout, axis=(0, 2, 3))
+        db = K.sum(dout, axis=(0, 2, 3))
 
         dout_reshaped = dout.transpose(1, 2, 3, 0).reshape(num_filters, -1)
         dw = dout_reshaped.dot(x_cols.T).reshape(w.shape)
@@ -97,6 +95,7 @@ class Conv2D(Layer):
         if filter_height == 1 and filter_width == 1 and pad == 0:
             return dx_cols.reshape(C, H, W, N).transpose(3, 0, 1, 2)
         else:
-            return np.asarray(
-                col2im(dx_cols, N, C, H, W, filter_height, filter_width, pad,
-                       stride))
+            dx_cols_cpu = K.get_cpu_array(dx_cols)
+            return K.asarray(
+                col2im(dx_cols_cpu, N, C, H, W, filter_height, filter_width,
+                       pad, stride))

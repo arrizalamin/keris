@@ -1,6 +1,6 @@
 from functools import reduce
 from operator import mul
-import numpy as np
+import keris.backend as K
 from keris.layers.layer import Layer
 
 
@@ -33,8 +33,8 @@ class Dense(Layer):
             hidden = input_shape
         output = self.shape
         params = {
-            'w': self.weight_scale * np.random.randn(hidden, output),
-            'b': np.zeros(output),
+            'w': self.weight_scale * K.random.randn(hidden, output),
+            'b': K.zeros(output),
         }
         return params
 
@@ -56,7 +56,7 @@ class Dense(Layer):
         dx = dout.dot(w.T)
         dx = dx.reshape(*x.shape)
         dw = x_rsp.T.dot(dout)
-        db = np.sum(dout, axis=0)
+        db = dout.sum(axis=0)
 
         grads = {
             'w': dw,

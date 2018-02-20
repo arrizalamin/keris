@@ -1,4 +1,4 @@
-import numpy as np
+import keris.backend as K
 from keris.initializers import initializers
 
 
@@ -47,7 +47,7 @@ class Layer:
     def _initialize_params(self, input_shape, output_shape):
         raise NotImplementedError
 
-    def _with_initializer(self, name, shape, dtype=np.float32):
+    def _with_initializer(self, name, shape, dtype=K.float32):
         if name not in initializers:
             raise ValueError("initializer does not exists")
 

@@ -1,4 +1,4 @@
-import numpy as np
+import keris.backend as K
 from keris.layers.layer import Layer
 
 
@@ -10,7 +10,7 @@ class Dropout(Layer):
     def forward(self, x, mode):
         out = None
         if mode == 'train':
-            self.mask = np.random.rand(*x.shape) >= self.rate
+            self.mask = K.random.rand(*x.shape) >= self.rate
             out = x * self.mask
         elif mode == 'test':
             out = x * self.rate

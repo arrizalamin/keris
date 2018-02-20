@@ -1,4 +1,4 @@
-import numpy as np
+import keris.backend as K
 from keris.container import Container
 
 

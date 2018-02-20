@@ -1,3 +1,4 @@
+import keris.backend as K
 import numpy as np
 from math import ceil
 from tqdm import trange
@@ -19,14 +20,16 @@ class BatchGenerator:
         if data == 'train':
             x_batch, y_batch = next(self.train_generator)
             if self.data_format == 'channels_last':
-                x_batch = x_batch.transpose(0, 3, 1, 2).astype(np.float32)
-                # y_batch = np.argmax(y_batch, axis=1)
+                x_batch = K.asarray(x_batch.transpose(0, 3, 1, 2),
+                                    dtype=K.float32)
+                y_batch = K.asarray(y_batch)
                 return x_batch, y_batch
         elif data == 'validation':
             x_batch, y_batch = next(self.val_generator)
             if self.data_format == 'channels_last':
-                x_batch = x_batch.transpose(0, 3, 1, 2).astype(np.float32)
-                # y_batch = np.argmax(y_batch, axis=1)
+                x_batch = K.asarray(x_batch.transpose(0, 3, 1, 2),
+                                    dtype=K.float32)
+                y_batch = K.asarray(y_batch)
                 return x_batch, y_batch
         else:
             raise ValueError('data must be train or validation')
@@ -46,11 +49,11 @@ class BatchLargeData:
         if data == 'train':
             x_batch, y_batch = zip(
                 *self.train_data[step * batch_size: (step + 1) * batch_size])
-            return np.array(x_batch), np.array(y_batch)
+            return K.array(x_batch), K.array(y_batch)
         elif data == 'validation':
             x_batch, y_batch = zip(
                 *self.val_data[step * batch_size: (step + 1) * batch_size])
-            return np.array(x_batch), np.array(y_batch)
+            return K.array(x_batch), K.array(y_batch)
         else:
             raise ValueError('data must be train or validation')
 

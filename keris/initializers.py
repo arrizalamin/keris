@@ -1,9 +1,9 @@
-import numpy as np
+import keris.backend as K
 from math import sqrt
 
 
 class Initializer:
-    def __call__(self, shape, dtype=np.float32):
+    def __call__(self, shape, dtype=K.float32):
         raise NotImplementedError
 
 
@@ -12,10 +12,10 @@ class RandomNormal(Initializer):
         self.mean = mean
         self.stddev = stddev
 
-    def __call__(self, shape, dtype=np.float32):
+    def __call__(self, shape, dtype=K.float32):
         mean, stddev = self.mean, self.stddev
 
-        return np.random.normal(loc=mean, scale=stddev, size=shape,
+        return K.random.normal(loc=mean, scale=stddev, size=shape,
                                 dtype=dtype)
 
 
@@ -24,12 +24,12 @@ class RandomUniform(Initializer):
         self.low = low
         self.high = high
 
-    def __call__(self, shape, dtype=np.float32):
-        return np.random.uniform(low=self.low, high=self.high, size=shape)
+    def __call__(self, shape, dtype=K.float32):
+        return K.random.uniform(low=self.low, high=self.high, size=shape)
 
 
 class GlorotNormal(Initializer):
-    def __call__(self, shape, dtype=np.float32):
+    def __call__(self, shape, dtype=K.float32):
         if len(shape) == 2:
             n_in, n_out = shape[0], shape[1]
         elif len(shape) == 4:
@@ -41,7 +41,7 @@ class GlorotNormal(Initializer):
 
         stddev = sqrt(2 / (n_in + n_out))
 
-        return np.random.normal(loc=0, scale=stddev, size=shape).astype(np.float32)
+        return K.random.normal(loc=0, scale=stddev, size=shape).astype(K.float32)
 
 
 initializers = {
