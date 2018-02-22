@@ -2,6 +2,7 @@ from functools import reduce
 from operator import mul
 import keris.backend as K
 from keris.layers.layer import Layer
+import numpy as np
 
 
 class Input(Layer):
@@ -33,8 +34,8 @@ class Dense(Layer):
             hidden = input_shape
         output = self.shape
         params = {
-            'w': self.weight_scale * K.random.randn(hidden, output),
-            'b': K.zeros(output),
+            'w': self.weight_scale * self._with_initializer('random_normal', (hidden, output)),
+            'b': K.zeros(output, K.float32),
         }
         return params
 

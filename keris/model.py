@@ -49,11 +49,11 @@ class BatchLargeData:
         if data == 'train':
             x_batch, y_batch = zip(
                 *self.train_data[step * batch_size: (step + 1) * batch_size])
-            return K.array(x_batch), K.array(y_batch)
+            return K.asarray(x_batch, dtype=K.float32), K.asarray(y_batch)
         elif data == 'validation':
             x_batch, y_batch = zip(
                 *self.val_data[step * batch_size: (step + 1) * batch_size])
-            return K.array(x_batch), K.array(y_batch)
+            return K.asarray(x_batch, dtype=K.float32), K.asarray(y_batch)
         else:
             raise ValueError('data must be train or validation')
 

@@ -15,8 +15,7 @@ class RandomNormal(Initializer):
     def __call__(self, shape, dtype=K.float32):
         mean, stddev = self.mean, self.stddev
 
-        return K.random.normal(loc=mean, scale=stddev, size=shape,
-                                dtype=dtype)
+        return K.random.normal(loc=mean, scale=stddev, size=shape).astype(dtype)
 
 
 class RandomUniform(Initializer):
