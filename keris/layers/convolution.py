@@ -1,6 +1,7 @@
 import keris.backend as K
 from keris.layers.layer import Layer
 from keris.utils.im2col import im2col, col2im
+import warnings
 
 
 class Conv2D(Layer):
@@ -40,8 +41,14 @@ class Conv2D(Layer):
         _, _, filter_height, filter_width = w.shape
 
         # Check dimensions
-        # assert (W + 2 * pad - filter_width) % stride == 0, 'width does not work'
-        # assert (H + 2 * pad - filter_height) % stride == 0, 'height does not work'
+        if (W + 2 * pad - filter_width) % stride != 0:
+            warnings.warn(
+                'layer %s: convolution incomplete on input width' % self.name,
+                UserWarning)
+        if (H + 2 * pad - filter_height) % stride != 0:
+            warnings.warn(
+                'layer %s: convolution incomplete on input height' % self.name,
+                UserWarning)
 
         # Create output
         out_height = (H + 2 * pad - filter_height) // stride + 1

@@ -1,6 +1,7 @@
 import keris.backend as K
 from keris.layers.layer import Layer
 from keris.utils.im2col import im2col, col2im
+import warnings
 
 
 class PoolMethod:
@@ -26,9 +27,6 @@ class MaxPoolReshapeMethod(PoolMethod):
         N, C, H, W = x.shape
         pool_height, pool_width = self.pool_size
         stride = self.stride
-        # assert pool_height == pool_width == stride, 'Invalid pool params'
-        # assert H % pool_height == 0
-        # assert W % pool_height == 0
 
         out_height = int(H // pool_height)
         out_width = int(W // pool_width)
@@ -82,9 +80,6 @@ class MaxPoolIm2colMethod(PoolMethod):
         N, C, H, W = x.shape
         pool_height, pool_width = self.pool_size
         stride = self.stride
-
-        # assert (H - pool_height) % stride == 0, 'Invalid height'
-        # assert (W - pool_width) % stride == 0, 'Invalid width'
 
         out_height = int((H - pool_height) // stride + 1)
         out_width = int((W - pool_width) // stride + 1)
@@ -146,6 +141,16 @@ class MaxPooling2D(Layer):
         stride = self.stride
         pool_height, pool_width = self.pool_size
         _, _, H, W = x.shape
+
+        # Check dimensions
+        if (H - pool_height) % stride != 0:
+            warnings.warn(
+                'layer %s: pool incomplete on input width' % self.name,
+                UserWarning)
+        if (W - pool_width) % stride != 0:
+            warnings.warn(
+                'layer %s: pool incomplete on input height' % self.name,
+                UserWarning)
 
         same_size = pool_height == pool_width == stride
         tiles = H % pool_height == 0 and W % pool_width == 0
