@@ -4,7 +4,7 @@ from keris.container import Container
 
 class Trainer(Container):
     def compile(self, loss_fn, optimizer):
-        self.loss_fn = loss_fn
+        self.loss_fn = loss_fn(self.layers[-1])
         self.optimizer = optimizer
         self._init_optimizer_params()
 
@@ -17,15 +17,18 @@ class Trainer(Container):
         }
 
     def _init_optimizer_params(self):
-        for layer in self.layers:
+        layers = self.layers + [self.loss_fn]
+        for layer in layers:
             if not layer.trainable:
                 continue
             for key, param in layer.params.items():
                 param_name = layer.name + key
                 self.optimizer.add_parameter(param_name, param.shape)
 
-    def _init_session(self):
+    def _init_forward_session(self):
         self.forward_outputs = {name: None for name in self.layers_name}
+
+    def _init_backward_session(self):
         self.backward_outputs = {
             (layer.name): {
                 'dout': None,
@@ -56,7 +59,7 @@ class Trainer(Container):
             self._traverse_graph_forward(layer, out, mode)
 
     def _forward(self, X, y=None, mode='train', stop=None):
-        self._init_session()
+        self._init_forward_session()
         # Perform forward pass
         self._traverse_graph_forward(self.layers[0], X, mode)
         last_layer_name = self.layers[-1].name
@@ -65,9 +68,9 @@ class Trainer(Container):
         if y is None:
             return out
 
-        acc, loss, dout = self.loss_fn(out, y)
+        acc, loss = self.loss_fn.forward(out, y, mode)
 
-        return acc, loss, dout
+        return acc, loss
 
     def _all_next_nodes_traversed(self, node):
         for next_node in node.next_layers:
@@ -100,8 +103,14 @@ class Trainer(Container):
 
             self._traverse_graph_backward(layer, dout, mode)
 
-    def _backward(self, dout, mode='train'):
+    def _backward(self, mode='train'):
+        self._init_backward_session()
         # Perform backpropagation
+        loss_fn = self.loss_fn
+        dout, loss_grads = loss_fn.backward(mode)
+        if loss_fn.trainable:
+            self._update_param(loss_fn, loss_fn.name, loss_grads)
+
         self._traverse_graph_backward(self.layers[-1], dout, mode)
         # print(self.grads)
 
@@ -124,8 +133,8 @@ class Trainer(Container):
         be called manually.
         """
         # Compute loss and gradient
-        acc, loss, dout = self._forward(x, y, mode='train')
-        self._backward(dout)
+        acc, loss = self._forward(x, y, mode='train')
+        self._backward(mode='train')
 
         return acc, loss
 
